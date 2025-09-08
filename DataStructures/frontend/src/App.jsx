@@ -1,16 +1,15 @@
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import Home from "./Home";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Inicio from "./Inicio";
 import BinarySearch from "./BinarySearch";
 
 function App() {
   return (
     <Router>
-      <nav style={{ padding: "10px", background: "#f5f5f5" }}>
-        <Link to="/" style={{ marginRight: "15px" }}>🏠 Inicio</Link>
-        <Link to="/binary-search">🔍 Búsqueda Binaria</Link>
-      </nav>
       <Routes>
-        <Route path="/" element={<Home />} />
+        {/* Página principal */}
+        <Route path="/" element={<Inicio />} />
+
+        {/* Algoritmos */}
         <Route path="/binary-search" element={<BinarySearch />} />
       </Routes>
     </Router>
