@@ -16,7 +16,7 @@ function App() {
         {/* Algoritmos */}
         <Route path="/binary-search" element={<BinarySearch />} />
         <Route path="/linear-search" element={<LinearSearch />} />
-        <Route path="/Hash-mod" element={<HashMod />} />
+        <Route path="/hash-mod" element={<HashMod />} />
         <Route path="/hash-square" element={<HashSquare />} />
         <Route path="/hash-trunc" element={<HashTrunc />} />
       </Routes>

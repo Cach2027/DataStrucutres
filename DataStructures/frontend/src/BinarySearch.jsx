@@ -1,264 +1,295 @@
-// src/BinarySearch.jsx
 import { useState, useEffect } from "react";
+import StructureControls from "./components/StructureControls";
 import Layout from "./components/Layout";
 
 function BinarySearch() {
-  const [size, setSize] = useState(5);
-  const [digits, setDigits] = useState(2);
+  const [size, setSize] = useState();
+  const [digits, setDigits] = useState();
   const [data, setData] = useState([]);
 
-  const [currentInput, setCurrentInput] = useState("");
-
-  // pasos: { low, mid, high }
+  const [inputValue, setInputValue] = useState("");
   const [steps, setSteps] = useState([]);
   const [currentStep, setCurrentStep] = useState(-1);
   const [foundIndex, setFoundIndex] = useState(null);
   const [playing, setPlaying] = useState(false);
+  const [message, setMessage] = useState("");
 
-  // generar número con n dígitos
-  const generateNumber = (digits) => {
-    if (digits <= 1) return Math.floor(Math.random() * 10);
-    const min = Math.pow(10, digits - 1);
-    const max = Math.pow(10, digits) - 1;
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  };
-
-  const generateData = () => {
-    const set = new Set();
-    const maxUnique =
-      Math.pow(10, digits) - Math.pow(10, Math.max(0, digits - 1));
-    if (size > maxUnique) {
-      alert(`Imposible generar ${size} claves únicos con ${digits} dígitos.`);
-      return;
-    }
-    while (set.size < size) {
-      set.add(generateNumber(digits));
-    }
-    const arr = Array.from(set).sort((a, b) => a - b);
-    setData(arr);
-    clearSimulation();
-  };
-
-  const clearData = () => {
-    setData([]);
-    clearSimulation();
-  };
-
+  // 🧹 Limpiar simulación
   const clearSimulation = () => {
     setSteps([]);
     setCurrentStep(-1);
     setFoundIndex(null);
     setPlaying(false);
+    setMessage("");
   };
 
-  const addNumber = () => {
+  // ➕ Insertar número
+  const handleInsert = () => {
     if (data.length >= size) {
-      alert("La estructura ya alcanzó el tamaño máximo.");
+      setMessage("⚠️ La estructura está llena. No se pueden insertar más elementos.");
       return;
     }
-    if (!/^\d+$/.test(currentInput)) {
-      alert("Ingresa un clave válido.");
+    
+    if (!/^\d+$/.test(inputValue)) {
+      alert("⚠️ Ingresa un número válido.");
       return;
     }
-    const num = parseInt(currentInput, 10);
+    const num = parseInt(inputValue, 10);
+    if (String(num).length !== digits) {
+      alert(`⚠️ La clave debe tener exactamente ${digits} dígitos.`);
+      return;
+    }
     if (data.includes(num)) {
-      alert("No se permiten duplicados.");
+      alert("⚠️ No se permiten duplicados.");
       return;
     }
-    setData((d) => [...d, num].sort((a, b) => a - b));
-    setCurrentInput("");
+    
+    const newData = [...data, num].sort((a, b) => a - b);
+    setData(newData);
+    setInputValue("");
     clearSimulation();
+    
+    if (newData.length === size) {
+      setMessage(`✅ Clave ${num} insertada correctamente. ⚠️ La estructura está llena.`);
+    } else {
+      setMessage(`✅ Clave ${num} insertada correctamente.`);
+    }
   };
 
+  // 🔍 Buscar número
   const handleSearch = () => {
     if (data.length === 0) {
-      alert("Genera o inserta datos primero.");
+      alert("⚠️ Primero inserta datos.");
       return;
     }
-    if (!/^\d+$/.test(currentInput)) {
-      alert("Ingresa una clave válida.");
+    if (!/^\d+$/.test(inputValue)) {
+      alert("⚠️ Ingresa un número válido para buscar.");
       return;
     }
-    const target = parseInt(currentInput, 10);
+    if (inputValue.length !== digits) {
+      alert(`⚠️ La clave buscada debe tener ${digits} dígitos.`);
+      return;
+    }
 
-    let low = 0;
-    let high = data.length - 1;
+    const target = parseInt(inputValue, 10);
+    let low = 0,
+      high = data.length - 1;
     const newSteps = [];
 
     while (low <= high) {
       const mid = Math.floor((low + high) / 2);
-      newSteps.push({ low, mid, high });
+      newSteps.push({ low, high, mid, value: data[mid] });
+
       if (data[mid] === target) break;
-      if (data[mid] < target) {
-        low = mid + 1;
-      } else {
-        high = mid - 1;
-      }
+      else if (data[mid] < target) low = mid + 1;
+      else high = mid - 1;
     }
 
     setSteps(newSteps);
     setCurrentStep(0);
     setFoundIndex(null);
-    setPlaying(false);
+    setPlaying(true);
+    setMessage("");
   };
 
-  // autoplay
+  // ➖ Eliminar número
+  const handleDelete = () => {
+    if (!/^\d+$/.test(inputValue)) {
+      alert("⚠️ Ingresa un número válido para eliminar.");
+      return;
+    }
+    const num = parseInt(inputValue, 10);
+    if (!data.includes(num)) {
+      alert(`⚠️ La clave ${num} no existe en la estructura.`);
+      return;
+    }
+    const newData = data.filter((n) => n !== num);
+    setData(newData);
+    setInputValue("");
+    clearSimulation();
+    setMessage(`🗑️ Clave ${num} eliminada correctamente.`);
+  };
+
+  // ▶ Reproducción automática de pasos
   useEffect(() => {
-    if (!playing) return;
-    if (steps.length === 0) return;
+    if (!playing || steps.length === 0) return;
     if (currentStep >= steps.length - 1) {
       setPlaying(false);
       return;
     }
-    const id = setTimeout(() => setCurrentStep((s) => s + 1), 650);
+
+    const id = setTimeout(() => setCurrentStep((s) => s + 1), 800);
     return () => clearTimeout(id);
   }, [playing, currentStep, steps]);
 
-  // check found
+  // ✅ Verificar si encontramos
   useEffect(() => {
     if (currentStep < 0 || steps.length === 0) return;
     const step = steps[currentStep];
-    const target = parseInt(currentInput || "NaN", 10);
-    if (data[step.mid] === target) {
+    const target = parseInt(inputValue, 10);
+
+    if (step.value === target) {
       setFoundIndex(step.mid);
+      setMessage(`✅ Valor ${target} encontrado en la posición #${step.mid + 1}`);
       setPlaying(false);
     } else if (currentStep === steps.length - 1) {
-      setFoundIndex(-1);
-      setPlaying(false);
+      setMessage(`❌ Valor ${target} no encontrado.`);
     }
-  }, [currentStep, steps, currentInput, data]);
+  }, [currentStep, steps, inputValue]);
 
-  const prevStep = () => {
-    if (currentStep > 0) {
-      setCurrentStep((s) => s - 1);
-      setFoundIndex(null);
-    }
+  // 💾 Guardar estructura actual
+  const structure = { data, digits, size };
+
+  // 📂 Cargar estructura guardada
+  const handleLoadData = (loaded) => {
+    setData(loaded.data || []);
+    setDigits(loaded.digits || 2);
+    setSize(loaded.size || 5);
+    clearSimulation();
+    setMessage("📂 Estructura cargada correctamente.");
   };
-  const nextStep = () => {
-    if (currentStep < steps.length - 1) setCurrentStep((s) => s + 1);
-  };
-  const togglePlay = () => {
-    if (steps.length === 0 || currentStep < 0) return;
-    setPlaying((p) => !p);
+
+  // 🆕 Nueva estructura
+  const handleNew = () => {
+    setData([]);
+    setInputValue("");
+    clearSimulation();
+    setMessage("🆕 Nueva estructura creada.");
   };
 
   return (
-    <Layout title="🔍 Búsqueda Binaria" color="from-sky-500 to-sky-600">
-      <main className="flex-1 p-10 text-center">
-        <h2 className="text-xl font-semibold mb-6 text-[#1D6A96]">
-          Configuración de la estructura
-        </h2>
-
+    <Layout title="Búsqueda Binaria" color="bg-[#1D6A96]">
+      <div className="p-8 flex flex-col items-center gap-6">
         {/* Configuración */}
-        <div className="flex flex-col sm:flex-row gap-6 justify-center mb-6">
-          <div>
-            <label className="block mb-2 text-[#283B42]">
-              Tamaño:
-            </label>
+        <div className="flex gap-4 items-center">
+          <div className="flex flex-col items-center">
+            <label className="font-semibold">Tamaño</label>
             <input
               type="number"
-              min="1"
-              max="20"
               value={size}
               onChange={(e) => setSize(Number(e.target.value))}
-              className="px-3 py-2 rounded-md border focus:ring-2 focus:ring-[#1D6A96]"
+              className="w-24 text-center border rounded-md p-1"
             />
           </div>
-          <div>
-            <label className="block mb-2 text-[#283B42]">Dígitos por clave:</label>
+          <div className="flex flex-col items-center">
+            <label className="font-semibold">Dígitos</label>
             <input
               type="number"
-              min="1"
-              max="6"
               value={digits}
               onChange={(e) => setDigits(Number(e.target.value))}
-              className="px-3 py-2 rounded-md border focus:ring-2 focus:ring-[#1D6A96]"
+              className="w-24 text-center border rounded-md p-1"
             />
           </div>
         </div>
 
-        {/* Input único */}
-        <div className="flex gap-3 justify-center mb-6">
+        {/* Input único + acciones */}
+        <label className="font-semibold mb-2 text-gray-800">Digitar clave:</label>
+        <div className="flex gap-3">
           <input
             placeholder={`Clave (${digits} dígitos)`}
-            value={currentInput}
-            onChange={(e) => setCurrentInput(e.target.value)}
-            className="px-3 py-2 rounded-md border w-60 text-center"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            className="px-3 py-2 rounded-md border border-cerulean w-60 text-center bg-white focus:ring-2 focus:ring-cerulean"
           />
           <button
-            onClick={addNumber}
+            onClick={handleInsert}
             disabled={data.length >= size}
-            className="px-4 py-2 bg-[#1D6A96] text-white rounded-lg shadow-md hover:bg-[#144d6f] disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`px-4 py-2 rounded-lg text-white shadow-md transition-colors ${
+              data.length >= size
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-[#1D6A96] hover:bg-[#144d6f]"
+            }`}
           >
-             Agregar
+             Insertar
           </button>
           <button
             onClick={handleSearch}
-            className="px-4 py-2 bg-[#1D6A96] text-white rounded-lg shadow-md hover:bg-[#144d6f]"
+            className="px-4 py-2 bg-[#1D6A96] text-white rounded-lg hover:bg-[#144d6f]"
           >
              Buscar
           </button>
+          <button
+            onClick={handleDelete}
+            className="px-4 py-2 bg-[#1D6A96] text-white rounded-lg hover:bg-[#144d6f]"
+          >
+            Eliminar
+          </button>
+          <button
+            onClick={handleNew}
+            className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500"
+          >
+             Nueva
+          </button>
         </div>
 
-        {/* Array */}
-        <div className="flex flex-wrap justify-center gap-4 mt-6">
+        {/* Guardar / Cargar */}
+        <StructureControls structure={structure} onLoadData={handleLoadData} />
+
+        {/* Estructura en tabla */}
+        <div className="mt-8">
           {data.length === 0 ? (
-            <p className="text-gray-500">(No hay Claves)</p>
+            <p className="text-gray-500">(No hay datos aún)</p>
           ) : (
-            data.map((num, idx) => {
-              const step = steps[currentStep];
-              const isMid = step && step.mid === idx;
-              const isFound = foundIndex === idx;
-              return (
-                <div
-                  key={idx}
-                  className={`px-4 py-3 rounded-md shadow-md font-bold text-lg
-                    ${isFound ? "bg-green-400 text-white" : ""}
-                    ${isMid && !isFound ? "bg-yellow-300" : ""}
-                    ${!isMid && !isFound ? "bg-white/80 dark:bg-gray-800" : ""}
-                  `}
-                >
-                  {num}
-                  <div className="text-xs mt-1">#{idx + 1}</div>
-                </div>
-              );
-            })
+            <div className="overflow-x-auto">
+              <table className="border-collapse border border-gray-400 text-center">
+                <thead>
+                  <tr>
+                    {data.map((_, idx) => (
+                      <th
+                        key={idx}
+                        className="border border-gray-400 px-3 py-2 bg-gray-200"
+                      >
+                        #{idx + 1}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    {data.map((num, idx) => {
+                      const step = steps[currentStep];
+                      const isMid = step && step.mid === idx;
+                      const isFound = foundIndex === idx;
+
+                      return (
+                        <td
+                          key={idx}
+                          className={`border border-gray-400 px-4 py-3 font-semibold transition-colors duration-300 ${
+                            isFound
+                              ? "bg-green-500 text-white"
+                              : isMid
+                              ? "bg-yellow-300"
+                              : "bg-white"
+                          }`}
+                        >
+                          {num}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
-        {/* Controles */}
-        {steps.length > 0 && (
-          <div className="mt-8">
-            <p className="mb-2">
-              Paso {currentStep + 1} de {steps.length}
-            </p>
-            <div className="flex gap-3 justify-center">
-              <button onClick={prevStep} className="px-3 py-1 bg-gray-200 rounded">
-                ⬅
-              </button>
-              <button onClick={togglePlay} className="px-3 py-1 bg-gray-200 rounded">
-                {playing ? "⏸" : "▶"}
-              </button>
-              <button onClick={nextStep} className="px-3 py-1 bg-gray-200 rounded">
-                ➡
-              </button>
-            </div>
+        {/* Mensaje de resultado */}
+        {message && (
+          <div
+            className={`mt-4 text-lg font-semibold ${
+              message.startsWith("✅") || message.startsWith("📂") || message.startsWith("🆕")
+                ? "text-green-600"
+                : message.startsWith("⚠️")
+                ? "text-orange-600"
+                : message.startsWith("🗑️")
+                ? "text-red-600"
+                : "text-red-600"
+            }`}
+          >
+            {message}
           </div>
         )}
-
-        {/* Resultado */}
-        {foundIndex !== null && currentStep >= 0 && (
-          <div className="mt-6">
-            {foundIndex >= 0 ? (
-              <h3 className="text-2xl font-bold text-green-600">
-                ✅ Encontrado en posición {foundIndex + 1}
-              </h3>
-            ) : (
-              <h3 className="text-2xl font-bold text-red-500">❌ No encontrado</h3>
-            )}
-          </div>
-        )}
-      </main>
+      </div>
     </Layout>
   );
 }
